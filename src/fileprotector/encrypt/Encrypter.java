@@ -36,7 +36,8 @@ public class Encrypter {
         String[] fullFileName = originalFile.getName().split(".");
         String fileName       = fullFileName[0];
         String fileExtension  = fullFileName[1];
-        String filePath       = originalFile.getAbsolutePath();
+        String filePath       = originalFile.getAbsolutePath()
+                .substring(0, originalFile.getAbsolutePath().length() - fileName.length());
         
         /**
          * Encrypted Content File.
@@ -218,7 +219,7 @@ public class Encrypter {
                 f.createNewFile();
             }
 
-            fos.write(this.stringToByte(extAndPath));
+            fos.write(Utils.stringToByte(extAndPath));
             fos.flush();
             fos.close();
         } catch (IOException e) {
@@ -234,8 +235,4 @@ public class Encrypter {
         }
     }
     
-    public byte[] stringToByte(String data) {
-        byte[] bArray = data.getBytes();
-        return bArray;
-    }
 }

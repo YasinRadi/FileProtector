@@ -12,7 +12,7 @@ package fileprotector.gui;
  */
 public class FileProtector extends javax.swing.JFrame {
 
-    public final static String FILE_PATH = "C:/Users/YasinR/Documents/Files/";
+    public final static String FILE_PATH = "crypt/";
     
     /**
      * Creates new form FileProtector

@@ -5,13 +5,17 @@
  */
 package fileprotector.utils;
 
+import fileprotector.decrypt.Decrypter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.security.Key;
+import java.io.UnsupportedEncodingException;
 import java.security.KeyStore;
 import java.security.MessageDigest;
+import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.util.Arrays;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -21,21 +25,43 @@ import javax.crypto.spec.SecretKeySpec;
  */
 public class Utils {
     
+    /**
+     * Get the Key store.
+     * @return KeyStore
+     * @throws Exception 
+     */
     public static KeyStore getKeyStore() throws Exception 
     {
         return loadKeyStore("source.jks", "password");
     }
     
+    /**
+     * Get the Certificate related to the Key Store.
+     * @return Certificate
+     * @throws Exception 
+     */
     public static Certificate getCertificate() throws Exception 
     {
         return getKeyStore().getCertificate("source");
     }
     
-    public static Key getKey() throws Exception
+    /**
+     * Get the Key Store Private Key.
+     * @return PrivateKey
+     * @throws Exception 
+     */
+    public static PrivateKey getKey() throws Exception
     {
-        return getKeyStore().getKey("source", "password".toCharArray());
+        return (PrivateKey) getKeyStore().getKey("source", "password".toCharArray());
     } 
     
+    /**
+     * Loads the Key Store.
+     * @param ksFile KeyStore path
+     * @param ksPwd KeyStore password
+     * @return KeyStore
+     * @throws Exception 
+     */
     public static KeyStore loadKeyStore(String ksFile, String ksPwd) throws Exception {
         KeyStore ks = KeyStore.getInstance("JCEKS");
         File f = new File(ksFile);
@@ -46,11 +72,17 @@ public class Utils {
         return ks;
     }
     
-    public static SecretKey passwordKeyGeneration(String text, int keySize) {
+    /**
+     * Generates a SecretKey using the inputed password.
+     * @param password password
+     * @param keySize SecretKey size
+     * @return SecretKey
+     */
+    public static SecretKey passwordKeyGeneration(String password, int keySize) {
         SecretKey sKey = null;
         if ((keySize == 128) || (keySize == 192) || (keySize == 256)) {
             try {
-                byte[] data = text.getBytes("UTF-8");
+                byte[] data = password.getBytes("UTF-8");
                 MessageDigest md = MessageDigest.getInstance("SHA-256");
                 byte[] hash = md.digest(data);
                 byte[] key = Arrays.copyOf(hash, keySize / 8);
@@ -60,5 +92,25 @@ public class Utils {
             }
         }
         return sKey;
+    }
+    
+    /**
+     * C
+     * @param arr
+     * @return 
+     */
+    public static String byteToString(byte[] arr) {
+        String str = null;
+        try {
+            str = new String(arr, "UTF-8");
+        } catch (UnsupportedEncodingException ex) {
+            Logger.getLogger(Decrypter.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return str;
+    }
+    
+    public static byte[] stringToByte(String data) {
+        byte[] bArray = data.getBytes();
+        return bArray;
     }
 }
