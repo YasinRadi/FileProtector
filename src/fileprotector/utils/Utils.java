@@ -95,9 +95,9 @@ public class Utils {
     }
     
     /**
-     * C
-     * @param arr
-     * @return 
+     * Converts a byte[] into its String equivalent.
+     * @param arr byte[]
+     * @return String
      */
     public static String byteToString(byte[] arr) {
         String str = null;
@@ -109,8 +109,34 @@ public class Utils {
         return str;
     }
     
+    /**
+     * Converts a String into its byte[] equivalent.
+     * @param data String
+     * @return byte[]
+     */
     public static byte[] stringToByte(String data) {
         byte[] bArray = data.getBytes();
         return bArray;
+    }
+    
+    /**
+     * Checks if the input password and the confirm password are equal.
+     * @param pass String
+     * @param confirm String
+     * @return boolean
+     */
+    public static boolean passwordCheck(String pass, String confirm)
+    {
+        return pass.equals(confirm);
+    }
+    
+    /**
+     * Converts a char[] into String.
+     * @param array char[]
+     * @return String
+     */
+    public static String charArrayToString(char[] array)
+    {
+        return new String(array);
     }
 }
