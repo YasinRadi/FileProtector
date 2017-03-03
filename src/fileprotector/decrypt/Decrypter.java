@@ -5,7 +5,7 @@
  */
 package fileprotector.decrypt;
 
-import exceptions.DecryptingException;
+import filprotector.exceptions.DecryptingException;
 import fileprotector.gui.FileProtector;
 import fileprotector.utils.Utils;
 import java.io.File;

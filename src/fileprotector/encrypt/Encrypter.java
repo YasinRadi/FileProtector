@@ -5,7 +5,7 @@
  */
 package fileprotector.encrypt;
 
-import exceptions.EncryptingException;
+import filprotector.exceptions.EncryptingException;
 import fileprotector.gui.FileProtector;
 import fileprotector.utils.Utils;
 import java.io.File;
@@ -31,16 +31,13 @@ public class Encrypter {
          */
         String[] fullFileName = originalFile.getName().split("\\.");
         String fileExtension  = fullFileName[fullFileName.length - 1];
-        System.out.println(fileExtension);
         
         String fileName       = originalFile.getName()
                 .substring(0, originalFile.getName().length() - (fileExtension.length() + 1));
-        System.out.println(fileName);
         
         String filePath       = originalFile.getAbsolutePath()
                 .substring(0, originalFile.getAbsolutePath().length() - fileName.length());
         if(filePath.charAt(filePath.length() - 1) == '.') filePath = filePath.substring(0, filePath.length() - 1);
-        System.out.println(filePath);
         
         /**
          * Encrypted Content File.
@@ -98,10 +95,6 @@ public class Encrypter {
              */
             this.writeExtensionAndPath(fileExtension, filePath, fileExt);
             
-            /**
-             * Delete original file once encrypted.
-             */
-            if(originalFile.exists()) originalFile.delete();
         }
         catch (FileNotFoundException e)
         {
@@ -143,7 +136,7 @@ public class Encrypter {
         return encryptedData;
     }
     
-    private byte[][] encryptWrappedData(byte[] data, PublicKey pub) throws EncryptingException {
+    public byte[][] encryptWrappedData(byte[] data, PublicKey pub) throws EncryptingException {
         byte[][] encWrappedData = new byte[2][];
         try {
             KeyGenerator kgen = KeyGenerator.getInstance("AES");

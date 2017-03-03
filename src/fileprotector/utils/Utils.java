@@ -139,4 +139,9 @@ public class Utils {
     {
         return new String(array);
     }
+    
+    public static void encryptFileToSend(File f, byte[] encData)
+    {
+        
+    }
 }

@@ -5,12 +5,11 @@
  */
 package fileprotector.gui;
 
-import exceptions.DecryptingException;
+import filprotector.exceptions.DecryptingException;
 import fileprotector.decrypt.Decrypter;
 import fileprotector.encrypt.Encrypter;
 import fileprotector.utils.Utils;
 import java.io.File;
-import java.security.GeneralSecurityException;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 
@@ -28,8 +27,7 @@ public class FileProtector extends javax.swing.JFrame {
     /**
      * Config Files Directory.
      */
-    public final static String CONFIG_PATH  = "config/";
-    
+    public final static String CONFIG_PATH  = "config/";    
 
     /**
      * Encrypter object.
@@ -58,6 +56,7 @@ public class FileProtector extends javax.swing.JFrame {
     public FileProtector() {
         initComponents();
         this.setTitle("File Protector");
+        this.setLocationRelativeTo(null);
         this.browser.setMultiSelectionEnabled(true);
     }
 
@@ -164,12 +163,15 @@ public class FileProtector extends javax.swing.JFrame {
 
     private void btnBrowseActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnBrowseActionPerformed
 
-        this.browser.showOpenDialog(this);
-        this.files = this.browser.getSelectedFiles();
-        String s   = "";
-        for(File f : this.getFiles()) s += " \"" + f.getName() + "\", ";
-        if(!s.isEmpty()) s = s.substring(0, s.length() - 1);
-        this.tfPath.setText(s);
+        int result = this.browser.showOpenDialog(this);
+        if(result == JFileChooser.OPEN_DIALOG) {
+            this.files = this.browser.getSelectedFiles();
+            String s   = "";
+            for(File f : this.getFiles()) s += " \"" + f.getName() + "\", ";
+            if(!s.isEmpty()) s = s.substring(0, s.length() - 1);
+            this.tfPath.setText(s);
+        }
+        
     }//GEN-LAST:event_btnBrowseActionPerformed
 
     private void btnEncryptActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEncryptActionPerformed
@@ -180,6 +182,9 @@ public class FileProtector extends javax.swing.JFrame {
                 for(File f : this.getFiles())
                 {
                     this.encrypter.encryptFile(f, Utils.charArrayToString(this.tfPass.getPassword()));
+                    /**
+                     * Delete original file once encrypted.
+                     */
                     f.delete();
                 }
                 
