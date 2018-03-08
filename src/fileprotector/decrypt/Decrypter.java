@@ -5,15 +5,24 @@
  */
 package fileprotector.decrypt;
 
-import filprotector.exceptions.DecryptingException;
+import fileprotector.encrypt.Encrypter;
+import fileprotector.exceptions.DecryptingException;
 import fileprotector.gui.FileProtector;
 import fileprotector.utils.Utils;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.util.Base64;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 
 /**
@@ -22,7 +31,14 @@ import javax.crypto.SecretKey;
  */
 public class Decrypter {
     
-    public void decrypt(File fileToDecrypt, String password) throws DecryptingException
+    /**
+     * Decrypt a file given a password.
+     * @param fileToDecrypt File
+     * @param password      String
+     * @throws DecryptingException 
+     * @throws IOException
+     */
+    public void decrypt(File fileToDecrypt, String password) throws DecryptingException, IOException, Exception
     {        
         /**
          * Gets the file name.
@@ -33,54 +49,28 @@ public class Decrypter {
                 .substring(0, fileToDecrypt.getName().length() - (fileExtension.length() + 1));
         
         /**
-         * Extension and original Path file.
-         */
-        File extFile       = new File(FileProtector.CONFIG_PATH + fileName + "Ext.bin");
-        
-        /**
-         * Get original file extension from extension file.
-         */
-        String ext         = readExtFile(extFile).split(";")[0];
-        
-        /**
-         * Get original file absolute path from extension file.
-         */
-        String origPath    = readExtFile(extFile).split(";")[1];
-        if(origPath.contains("\\.")) origPath = origPath.replace("\\.", "");
-        
-        /**
-         * Key file.
-         */
-        File keyFile       = new File(FileProtector.CONFIG_PATH + fileName + "Key.rsa");
-        
-        /**
-         * Decrypted destination file.
-         */
-        File decryptedFile = new File(origPath + "." + ext); 
-        
-        /**
          * File Output Stream to write on end file.
          */
         FileOutputStream fos = null;   
         
-        try
-        {
-            fos = new FileOutputStream(decryptedFile);
+        try {            
             
-            /**
-             * Read fully encrypted data.
-             */
-            byte[] fullEncryptContent = readData(fileToDecrypt);
+            byte[] encData      = readData(fileToDecrypt);
+            String encString    = Utils.byteToString(encData);
+            String[] enc        = encString.split(";");
+            String dataString   = enc[0];
+            String keyString    = enc[1];
+            String extString    = enc[2];
+            byte[] data         = Base64.getDecoder().decode(dataString);
+            byte[] key          = Base64.getDecoder().decode(keyString);
+            byte[] ext          = Base64.getDecoder().decode(extString);
+            String extension    = Utils.byteToString(ext);
             
-            /**
-             * Read encryption key.
-             */
-            byte[] decryptionKey      = readData(keyFile);
             
             /**
              * Decrypt wrapped data.
              */
-            byte[] unwrappedData      = decryptWrappedData(fullEncryptContent, decryptionKey, Utils.getKey());
+            byte[] unwrappedData      = decryptWrappedData(data, key, Utils.getKey());
             
             /**
              * Generate a key using password and fully decrypt data.
@@ -90,6 +80,7 @@ public class Decrypter {
             /**
              * Write fully decrypted data into new file.
              */
+            fos = new FileOutputStream(new File(FileProtector.FILE_PATH + fileName + "." + extension));
             fos.write(fullDecryptContent);
             fos.flush();
             fos.close();
@@ -97,34 +88,20 @@ public class Decrypter {
             /**
              * Delete meta files once decrypted.
              */
-            keyFile.delete();
-            extFile.delete();
             fileToDecrypt.delete();
-        }
-        catch(IOException e)
-        {
-            
-        }
-        catch(DecryptingException e)
-        {
+        } catch(IOException e) {
+            throw new IOException();
+        } catch(DecryptingException e) {
             throw new DecryptingException();
-        }
-        catch(Exception e)
-        {
-            
-        }
-        finally
-        {
-            try
-            {
-                if(fos != null)
-                {
+        } catch(Exception e) {
+            throw new Exception();
+        } finally {
+            try {
+                if(fos != null) {
                     fos.close();
                 }
-            }
-            catch(IOException e)
-            {
-                
+            } catch(IOException e) {
+                throw new Exception();
             }
         }
     }
@@ -133,15 +110,19 @@ public class Decrypter {
      * Uses a SecretKey to decrypt data.
      * @param sKey SecretKey
      * @param data byte[]
+     * @throws DecryptingException
      * @return byte[]
      */
-    public byte[] decryptData(SecretKey sKey, byte[] data) throws DecryptingException {
+    public byte[] decryptData(SecretKey sKey, byte[] data) throws DecryptingException 
+    {
         byte[] decryptedData = null;
         try {
             Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
             cipher.init(Cipher.DECRYPT_MODE, sKey);
             decryptedData = cipher.doFinal(data);
-        } catch (Exception ex) {
+        } catch (InvalidKeyException | NoSuchAlgorithmException 
+                | BadPaddingException | IllegalBlockSizeException 
+                | NoSuchPaddingException ex) {
             throw new DecryptingException();
         }
         return decryptedData;
@@ -154,7 +135,8 @@ public class Decrypter {
      * @param pk PrivateKey
      * @return byte[] unwrapped data
      */
-    public byte[] decryptWrappedData(byte[] data, byte[] key, PrivateKey pk) {
+    public byte[] decryptWrappedData(byte[] data, byte[] key, PrivateKey pk) 
+    {
         byte[] decWrappedData = null;
         try {
             Cipher cipher = Cipher.getInstance("RSA");
@@ -163,8 +145,10 @@ public class Decrypter {
             cipher = Cipher.getInstance("AES");
             cipher.init(Cipher.DECRYPT_MODE, sKey);
             decWrappedData = cipher.doFinal(data);
-        } catch (Exception ex) {
-            System.err.println("Descrypting error: " + ex);
+        } catch (InvalidKeyException | NoSuchAlgorithmException 
+                | BadPaddingException | IllegalBlockSizeException 
+                | NoSuchPaddingException ex) {
+            Logger.getLogger(Decrypter.class.getName()).log(Level.SEVERE, null, ex);
         }
         return decWrappedData;
     }
@@ -174,54 +158,24 @@ public class Decrypter {
      * @param f File
      * @return byte[] data
      */
-    public byte[] readData(File f) {
-
+    public byte[] readData(File f) 
+    {
         FileInputStream fis = null;
         byte[] data = new byte[(int) f.length()];
         try {
             fis = new FileInputStream(f);
             fis.read(data);
         } catch (IOException e) {
-            e.printStackTrace();
+            Logger.getLogger(Encrypter.class.getName()).log(Level.SEVERE, null, e);
         } finally {
-            try {
-                if (fis != null) {
+            if (fis != null) {
+                try {
                     fis.close();
+                } catch (IOException e) {
+                    Logger.getLogger(Encrypter.class.getName()).log(Level.SEVERE, null, e);
                 }
-            } catch (IOException ex) {
-                ex.printStackTrace();
             }
         }
         return data;
-    }
-    
-    /**
-     * Reads the Path and Extension configuration file.
-     * @param f File
-     * @return String
-     */
-    public String readExtFile(File f)
-    {
-        String ext          = "";
-        FileInputStream fis = null;
-        byte[] extension    = new byte[(int) f.length()];
-        try {
-            fis = new FileInputStream(f);
-            fis.read(extension);
-            
-            ext = Utils.byteToString(extension);
-            
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (fis != null) {
-                    fis.close();
-                }
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
-        }
-        return ext;
     }
 }

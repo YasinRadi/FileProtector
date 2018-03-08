@@ -3,13 +3,13 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package filprotector.exceptions;
+package fileprotector.exceptions;
 
 /**
  *
  * @author Yasin Radi
  */
-public class DecryptingException extends Exception{
+public class EncryptingException extends Exception{
     
-    public DecryptingException() {}
+    public EncryptingException() {}
 }

@@ -11,6 +11,7 @@ import java.io.FileInputStream;
 import java.io.UnsupportedEncodingException;
 import java.security.KeyStore;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.util.Arrays;
@@ -23,7 +24,7 @@ import javax.crypto.spec.SecretKeySpec;
  *
  * @author Yasin Radi
  */
-public class Utils {
+public abstract class Utils {
     
     /**
      * Get the Key store.
@@ -73,7 +74,7 @@ public class Utils {
     }
     
     /**
-     * Generates a SecretKey using the inputed password.
+     * Generates a SecretKey using the input password.
      * @param password password
      * @param keySize SecretKey size
      * @return SecretKey
@@ -87,8 +88,8 @@ public class Utils {
                 byte[] hash = md.digest(data);
                 byte[] key = Arrays.copyOf(hash, keySize / 8);
                 sKey = new SecretKeySpec(key, "AES");
-            } catch (Exception ex) {
-                System.err.println("Key generation error:" + ex);
+            } catch (UnsupportedEncodingException | NoSuchAlgorithmException e) {
+                Logger.getLogger(Utils.class.getName()).log(Level.SEVERE, null, e);
             }
         }
         return sKey;
@@ -140,8 +141,14 @@ public class Utils {
         return new String(array);
     }
     
-    public static void encryptFileToSend(File f, byte[] encData)
+    /**
+     * Checks if passwords are not empty.
+     * @param pass String
+     * @param confirm String
+     * @return boolean
+     */
+    public static boolean passwordNotEmpty(String pass, String confirm)
     {
-        
+        return !pass.isEmpty() && !confirm.isEmpty();
     }
 }

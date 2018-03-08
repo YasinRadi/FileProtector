@@ -5,7 +5,7 @@
  */
 package fileprotector.encrypt;
 
-import filprotector.exceptions.EncryptingException;
+import fileprotector.exceptions.EncryptingException;
 import fileprotector.gui.FileProtector;
 import fileprotector.utils.Utils;
 import java.io.File;
@@ -13,9 +13,17 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
+import java.util.Base64;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 
 /**
@@ -24,35 +32,28 @@ import javax.crypto.SecretKey;
  */
 public class Encrypter {
     
-    public void encryptFile(File originalFile, String password) throws FileNotFoundException, IOException
+    /**
+     * Encrypts a file given the file and a password.
+     * @param originalFile  File
+     * @param password      String
+     * @throws FileNotFoundException
+     * @throws IOException
+     * @throws Exception 
+     */
+    public void encryptFile(File originalFile, String password) throws FileNotFoundException, IOException, Exception
     {    
         /**
-         * File name, file extension and file absolute path.
+         * File name & file extension.
          */
         String[] fullFileName = originalFile.getName().split("\\.");
         String fileExtension  = fullFileName[fullFileName.length - 1];
-        
         String fileName       = originalFile.getName()
                 .substring(0, originalFile.getName().length() - (fileExtension.length() + 1));
-        
-        String filePath       = originalFile.getAbsolutePath()
-                .substring(0, originalFile.getAbsolutePath().length() - fileName.length());
-        if(filePath.charAt(filePath.length() - 1) == '.') filePath = filePath.substring(0, filePath.length() - 1);
         
         /**
          * Encrypted Content File.
          */
-        File encryptedFile    = new File(FileProtector.FILE_PATH + fileName + ".rsa");
-        
-        /**
-         * Encrypted Key File.
-         */
-        File encryptedKey     = new File(FileProtector.CONFIG_PATH + fileName + "Key.rsa");
-        
-        /**
-         * File that saves original file extension.
-         */
-        File fileExt          = new File(FileProtector.CONFIG_PATH + fileName + "Ext.bin");
+        File encryptedFile    = new File(FileProtector.FILE_PATH + fileName + ".bin");
         
         /**
          * File Input Stream and Byte array that will hold file content.
@@ -60,8 +61,7 @@ public class Encrypter {
         FileInputStream fis   = null;
         byte[] fileContent    = new byte[(int) originalFile.length()];
         
-        try
-        {
+        try {
             fis = new FileInputStream(originalFile);
             fis.read(fileContent);
             
@@ -81,62 +81,67 @@ public class Encrypter {
             byte[][] wrapped  = this.encryptWrappedData(passEncrypt, Utils.getCertificate().getPublicKey());
             
             /**
-             * Encrypted Content writing on a new file.
+             * Encode file data to be saved.
              */
-            this.writeEncryptedContent(wrapped, encryptedFile);
+            byte[] encodData  = Base64.getEncoder().encode(wrapped[1]);
+            byte[] encodKey   = Base64.getEncoder().encode(wrapped[0]);
+            byte[] encodExt   = Base64.getEncoder().encode(Utils.stringToByte(fileExtension));
+            String dataString = Utils.byteToString(encodData);
+            String keyString  = Utils.byteToString(encodKey);
+            String extString  = Utils.byteToString(encodExt);
             
             /**
-             * Wrapped algorithm key writing on a new key file.
+             * Write encrypted encoded data into file.
              */
-            this.writeEncryptedKey(wrapped, encryptedKey);
-            
-            /**
-             * Write file extension and file absolute path into a file.
-             */
-            this.writeExtensionAndPath(fileExtension, filePath, fileExt);
-            
-        }
-        catch (FileNotFoundException e)
-        {
+            this.writeEncryptedContent(dataString, keyString, extString, encryptedFile);
+        } catch (FileNotFoundException e) {
             throw new FileNotFoundException();
-        }
-        catch (IOException e)
-        {
+        } catch (IOException e) {
             throw new IOException();
-        }
-        catch (Exception e)
-        {
-            
-        }
-        finally
-        {
-            try
-            {
-                if(fis != null)
-                {
+        } catch (Exception e) {
+            throw new Exception();
+        } finally {
+            try {
+                if(fis != null) {
                     fis.close();
                 }
+            } catch (IOException e) {
+                throw new Exception();
             }
-            catch (IOException e)
-            {}
         }
-        
-        
     }
     
-    private byte[] encryptData(SecretKey sKey, byte[] data) throws EncryptingException {
+    /**
+     * Encrypts a byte array of data using an AES algorithm taking a SecretKey.
+     * @param sKey  SecretKey
+     * @param data  byte[]
+     * @return  byte[]
+     * @throws EncryptingException 
+     */
+    private byte[] encryptData(SecretKey sKey, byte[] data) throws EncryptingException 
+    {
         byte[] encryptedData = null;
         try {
             Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
             cipher.init(Cipher.ENCRYPT_MODE, sKey);
             encryptedData = cipher.doFinal(data);
-        } catch (Exception ex) {
+        } catch (InvalidKeyException | NoSuchAlgorithmException 
+                | NoSuchPaddingException | IllegalBlockSizeException
+                | BadPaddingException ex) {
             throw new EncryptingException();
         }
         return encryptedData;
     }
     
-    public byte[][] encryptWrappedData(byte[] data, PublicKey pub) throws EncryptingException {
+    /**
+     * Encrypts a byte array of data using a RSA algorithm taking a PublicKey.
+     * @param data
+     * @param pub
+     * @return byte[][]
+     * @throws EncryptingException 
+     */
+    public byte[][] encryptWrappedData(byte[] data, PublicKey pub) throws EncryptingException 
+    {
         byte[][] encWrappedData = new byte[2][];
         try {
             KeyGenerator kgen = KeyGenerator.getInstance("AES");
@@ -150,88 +155,45 @@ public class Encrypter {
             byte[] encKey = cipher.wrap(sKey);
             encWrappedData[0] = encKey;
             encWrappedData[1] = encMsg;
-        } catch (Exception ex) {
+        } catch (InvalidKeyException | NoSuchAlgorithmException 
+                | BadPaddingException | IllegalBlockSizeException 
+                | NoSuchPaddingException ex) {
             throw new EncryptingException();
         }
         return encWrappedData;
     }
 
-    private void writeEncryptedContent(byte[][] encryptedData, File f) {
-        FileOutputStream fos = null;
-        try {
-            fos = new FileOutputStream(f);
-
-            if (!f.exists()) {
-                f.createNewFile();
-            }
-            // 0 = Key 1 = Data
-            fos.write(encryptedData[1]);
-            fos.flush();
-            fos.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (fos != null) {
-                    fos.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private void writeEncryptedKey(byte[][] encryptedData, File f) {
-
-        FileOutputStream fos = null;
-        try {
-            fos = new FileOutputStream(f);
-
-            if (!f.exists()) {
-                f.createNewFile();
-            }
-            // 0 = Key 1 = Data
-            fos.write(encryptedData[0]);
-            fos.flush();
-            fos.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (fos != null) {
-                    fos.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-    
-    private void writeExtensionAndPath(String extension, String path, File f)
+    /**
+     * Write data into file.
+     * @param data  String
+     * @param key   String 
+     * @param ext   String
+     * @param f     File
+     */
+    private void writeEncryptedContent(String data, String key, String ext, File f) 
     {
         FileOutputStream fos = null;
-        String extAndPath    = extension + ";" + path;
+        String encodedFile = data + ";" + key + ";" + ext;
         try {
             fos = new FileOutputStream(f);
-
+            byte[] encData = Utils.stringToByte(encodedFile);
             if (!f.exists()) {
                 f.createNewFile();
             }
-
-            fos.write(Utils.stringToByte(extAndPath));
+            
+            fos.write(encData);
             fos.flush();
             fos.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            Logger.getLogger(Encrypter.class.getName()).log(Level.SEVERE, null, e);
         } finally {
             try {
                 if (fos != null) {
                     fos.close();
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                Logger.getLogger(Encrypter.class.getName()).log(Level.SEVERE, null, e);
             }
         }
-    }
-    
+    }    
 }
